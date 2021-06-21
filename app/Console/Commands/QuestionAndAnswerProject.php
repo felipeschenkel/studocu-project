@@ -3,6 +3,8 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
+
 use App\Http\Controllers\AnswerController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\StatsController;
@@ -158,7 +160,8 @@ class QuestionAndAnswerProject extends Command
             }
 
             exit;
-        } catch (\Exception $e) {
+        } catch (\Exception $exception) {
+            Log::error($exception);
             $this->line('Something went wrong!');
             exit;
         }
