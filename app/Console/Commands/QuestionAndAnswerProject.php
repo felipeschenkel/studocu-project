@@ -56,7 +56,7 @@ class QuestionAndAnswerProject extends Command
         $this->askNickname();
     }
 
-    public function askNickname()
+    public function askNickname(): void
     {
         $nickname = $this->ask('What is your nickname?');
 
