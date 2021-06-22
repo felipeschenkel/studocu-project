@@ -2,12 +2,14 @@
 
 namespace App\Repositories;
 
-use App\Models\Answer;
+use Exception;
 use Illuminate\Support\Facades\Log;
+
+use App\Models\Answer;
 
 class AnswerRepository
 {
-    public function store(
+    public function saveAnswer(
         int $questionId,
         string $answer,
         bool $correctAnswer
@@ -21,7 +23,7 @@ class AnswerRepository
             ]);
 
             return true;
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             Log::error($exception);
             return false;
         }

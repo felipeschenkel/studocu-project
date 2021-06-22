@@ -12,15 +12,7 @@ class Question extends Model
 
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
-     */
     protected $fillable = [
-        'user_id',
-        'question',
-        'multiple_choice'
+        'question'
     ];
-
 }

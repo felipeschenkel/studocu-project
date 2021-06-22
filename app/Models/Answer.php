@@ -16,4 +16,8 @@ class Answer extends Model
         'answer',
         'is_correct',
     ];
+
+    protected $casts = [
+        'is_correct' => 'boolean'
+    ];
 }

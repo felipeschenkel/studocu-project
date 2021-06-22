@@ -2,60 +2,36 @@
 
 namespace App\Repositories;
 
-use App\Models\Question;
+use Exception;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
+
+use App\Models\Question;
 
 class QuestionRepository
 {
-    public function store(
-        string $question,
-        int $userId,
-        bool $multipleChoice
-    ): int
+    public function saveQuestion(string $question): int
     {
         try {
             $question = Question::create([
-                'user_id' => $userId,
-                'question' => $question,
-                'multiple_choice' => $multipleChoice
+                'question' => $question
             ]);
 
+            if (session()->has('number_questions')) {
+                $numberOfQuestions = session('number_questions');
+                session(['number_questions' => $numberOfQuestions + 1]);
+            }
+
             return $question->id;
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             Log::error($exception);
             return 0;
         }
     }
 
-    public function delete(int $questionId): bool
+    public function getQuestions(): Collection
     {
-        try {
-            $question = Question::find($questionId);
-            $question->delete();
-
-            return true;
-        } catch (\Exception $exception) {
-            Log::error($exception);
-            return false;
-        }
-    }
-
-    public function getUserQuestions(int $userId): Object
-    {
-        return Question::where('user_id', $userId)
-            ->get();
-    }
-
-    public function getNumberQuestions(int $userId): int
-    {
-        return Question::where('user_id', $userId)
-            ->count();
-    }
-
-    public function getUserQuestionsAndStatus(int $userId): object
-    {
-        return Question::where('user_id', $userId)
-            ->get();
+        return Question::all();
     }
 
     public function getQuestion(int $questionId): object
