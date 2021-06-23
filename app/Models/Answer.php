@@ -16,4 +16,18 @@ class Answer extends Model
         'answer',
         'is_correct',
     ];
+
+    protected $casts = [
+        'is_correct' => 'boolean'
+    ];
+
+    public function question()
+    {
+        return $this->belongsTo(Question::class);
+    }
+
+    public function getAnswersByQuestion(int $questionId): object
+    {
+        return Question::find($questionId)->answer;
+    }
 }

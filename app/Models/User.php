@@ -13,4 +13,9 @@ class User extends Authenticatable
     protected $fillable = [
         'nickname'
     ];
+
+    public function stat()
+    {
+        return $this->hasMany(Stat::class);
+    }
 }

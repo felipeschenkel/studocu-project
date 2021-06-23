@@ -15,9 +15,12 @@ class CreateAnswersTable extends Migration
     {
         Schema::create('answers', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->integer('question_id');
             $table->text('answer');
             $table->boolean('is_correct');
+            $table->foreignId('question_id')
+                ->constrained()
+                ->onUpdate('cascade')
+                ->onDelete('cascade');
         });
     }
 

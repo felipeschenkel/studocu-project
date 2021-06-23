@@ -2,13 +2,14 @@
 
 namespace App\Console\Commands;
 
+use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
-use App\Http\Controllers\AnswerController;
-use App\Http\Controllers\QuestionController;
-use App\Http\Controllers\StatsController;
-use App\Http\Controllers\UserController;
+use App\Services\AnswerService;
+use App\Services\QuestionService;
+use App\Services\StatService;
+use App\Services\UserService;
 
 class QuestionAndAnswerProject extends Command
 {
@@ -16,19 +17,20 @@ class QuestionAndAnswerProject extends Command
 
     protected $description = 'Questions and Answers Project';
 
-    private $choices;
-    private $userController;
-    private $questionController;
-    private $answerController;
-    private $statsController;
-    private $userId;
-    private $nickname;
+    private array $choices;
+    private string $nickname;
+    private int $userId;
+
+    private $answerService;
+    private $questionService;
+    private $statService;
+    private $userService;
 
     public function __construct(
-        UserController $userController,
-        QuestionController $questionController,
-        AnswerController $answerController,
-        StatsController $statsController
+        AnswerService $answerService,
+        QuestionService $questionService,
+        StatService $statService,
+        UserService $userService
     )
     {
         parent::__construct();
@@ -43,10 +45,10 @@ class QuestionAndAnswerProject extends Command
             7 => 'Exit'
         ];
 
-        $this->userController = $userController;
-        $this->questionController = $questionController;
-        $this->answerController = $answerController;
-        $this->statsController = $statsController;
+        $this->answerService = $answerService;
+        $this->questionService = $questionService;
+        $this->statService = $statService;
+        $this->userService = $userService;
         $this->userId = 0;
         $this->nickname = '';
     }
@@ -60,21 +62,15 @@ class QuestionAndAnswerProject extends Command
     {
         $nickname = $this->ask('What is your nickname?');
 
-        $nicknameSanitized = trim(preg_replace( '/[\W]/', '', $nickname));
+        $saveUser = $this->userService->getOrSaveUser($nickname);
 
-        if ($nicknameSanitized === '') {
-            $this->info('Please inform a valid nickname, alphanumeric characters only');
+        if (isset($saveUser['error'])) {
+            $this->info($saveUser['error']);
             $this->askNickname();
         }
 
-        $this->userId = $this->userController->getOrSaveUser($nicknameSanitized);
-
-        if ($this->userId == 0) {
-            $this->info('Error creating or retrieving the user - probably there is a problem with your DB connection');
-            exit;
-        }
-
-        $this->nickname = $nicknameSanitized;
+        $this->nickname = $saveUser['sanitized_nickname'];
+        $this->userId = $saveUser['user_id'];
 
         $this->initialMenu();
     }
@@ -121,67 +117,29 @@ class QuestionAndAnswerProject extends Command
         try {
             $question = $this->ask('Please, type the question:');
 
-            $multipleChoice = $this->choice('I need to know, is it a multiple choice question?', [
-                'Yes', 'No'
+            $arrayAnswers = array();
+            $numberOfAnswers = $this->choice("How many answers will this question have?", [
+                2 => '2',
+                3 => '3',
+                4 => '4'
             ]);
 
-            if ($multipleChoice == 'Yes') {
-                $arrayAnswers = array();
-                $numberOfAnswers = $this->choice("How many answers will this question have?", [
-                    2 => '2',
-                    3 => '3',
-                    4 => '4'
-                ]);
-
-                for ($i = 0; $i < $numberOfAnswers; $i++) {
-                    $answer = $this->ask('Please, type the answer ' . ($i + 1));
-                    $arrayAnswers[$i+1] = $answer;
-                }
-
-                $correctAnswer = $this->choice('Select the correct answer for your question', $arrayAnswers);
-                $indexCorrectAnswer = array_search($correctAnswer, $arrayAnswers);
-
-                $questionId = $this->questionController->store($question, $this->userId, true);
-
-                if ($questionId == 0) {
-                    $this->line('Something went wrong! Sorry!');
-                    $this->initialMenu();
-                }
-
-                $saveAnswers = $this->answerController->store($questionId, $arrayAnswers, $indexCorrectAnswer);
-
-                if ($saveAnswers) {
-                    $this->line('Question saved!');
-                } else {
-                    $this->line('Something went wrong when saving the answers!');
-                    $this->questionController->deleteQuestion($questionId);
-                }
-                $this->initialMenu();
+            for ($i = 0; $i < $numberOfAnswers; $i++) {
+                $answer = $this->ask('Please, type the answer ' . ($i + 1));
+                $arrayAnswers[$i+1] = $answer;
             }
 
-            if ($multipleChoice == 'No') {
-                $answer = $this->ask('Please, type the answer:');
+            $correctAnswer = $this->choice('Select the correct answer for your question', $arrayAnswers);
 
-                $questionId = $this->questionController->store($question, $this->userId, false);
+            $saveQuestionAndAnswers = $this->questionService->saveQuestionAndAnswers(
+                $question,
+                $correctAnswer,
+                $arrayAnswers
+            );
 
-                if ($questionId == 0) {
-                    $this->line('Something went wrong! Sorry!');
-                    $this->initialMenu();
-                }
-
-                $saveAnswer = $this->answerController->store($questionId, [$answer], true);
-
-                if ($saveAnswer) {
-                    $this->line('Question saved!');
-                } else {
-                    $this->line('Something went wrong when saving the answer!');
-                    $this->questionController->deleteQuestion($questionId);
-                }
-                $this->initialMenu();
-            }
-
-            exit;
-        } catch (\Exception $exception) {
+            $this->info($saveQuestionAndAnswers['message']);
+            $this->initialMenu();
+        } catch (Exception $exception) {
             Log::error($exception);
             $this->line('Something went wrong!');
             exit;
@@ -190,7 +148,7 @@ class QuestionAndAnswerProject extends Command
 
     public function listQuestions(): void
     {
-        $arrayQuestionsAndAnswers = $this->questionController->getListQuestionsAndAnswers($this->userId);
+        $arrayQuestionsAndAnswers = $this->questionService->getListQuestionsAndAnswers();
 
         $this->table(
             ['Questions', 'Answers', 'Correct Answer'],
@@ -203,26 +161,19 @@ class QuestionAndAnswerProject extends Command
     public function openPractice(): void
     {
         try {
-            $arrayQuestionsStats = $this->questionController->getQuestionsStats($this->userId);
-            $arrayStats = $this->statsController->getStatsByUser($this->userId);
-
-            if (count($arrayQuestionsStats) == 0) {
-                $this->line('You have to save at least one question to be able to practice!');
+            $arrQuestions = $this->statService->getQuestionsStats($this->userId);
+            if (isset($arrQuestions['error_message'])) {
+                $this->line($arrQuestions['error_message']);
                 $this->initialMenu();
             }
 
-            if (count($arrayStats) == 0) {
-                $this->line('Something went wrong when opening the stats!');
-                $this->initialMenu();
-            }
+            $numberOfQuestions = $arrQuestions['number_questions'];
+            $percentageQuestionsAnswered = $arrQuestions['percentage_answered_questions'];
 
             $this->table(
                 ['Id Question', 'Question', 'Status'],
-                $arrayQuestionsStats
+                $arrQuestions['question_status']
             );
-
-            $numberOfQuestions = $arrayStats[0]['number_questions'];
-            $percentageQuestionsAnswered = $arrayStats[0]['correctly_answered'];
 
             $this->line('There is ' . $numberOfQuestions . ' question(s) registered');
             $this->line('You completed ' . $percentageQuestionsAnswered);
@@ -233,31 +184,20 @@ class QuestionAndAnswerProject extends Command
                 $this->initialMenu();
             }
 
-            $questionExists = false;
-            $questionAlreadyAnsweredCorrectly = false;
-
-            foreach ($arrayQuestionsStats as $arrayQuestionStat) {
-                $questionId = $arrayQuestionStat['id'];
-                if ($questionToAnswer == $questionId) {
-                    $questionExists = true;
-                    if ($arrayQuestionStat['status'] == 'Correct') {
-                        $questionAlreadyAnsweredCorrectly = true;
-                    }
-                }
-            }
-
-            if (!$questionExists) {
-                $this->line("The Id entered does not exist.");
+            if (!in_array($questionToAnswer, $arrQuestions['questions_ids'])) {
+                $this->info('Invalid Id');
                 $this->openPractice();
             }
 
-            if ($questionAlreadyAnsweredCorrectly) {
-                $this->line("This question has already been answered correctly.");
+            $questionValidation = $this->questionService->getQuestionValidation($questionToAnswer, $arrQuestions);
+
+            if (!empty($questionValidation['error_message'])) {
+                $this->info($questionValidation['error_message']);
                 $this->openPractice();
             }
 
             $this->makeQuestion($questionToAnswer);
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             Log::error($exception);
             $this->line('Something went wrong!');
             $this->openPractice();
@@ -267,39 +207,32 @@ class QuestionAndAnswerProject extends Command
     public function makeQuestion(int $questionToAnswer): void
     {
         try {
-            $selQuestionAndItsAnswers = $this->questionController->getQuestionAndAnswers($questionToAnswer);
+            $selQuestionAndItsAnswers = $this->questionService->getQuestionAndAnswers($questionToAnswer);
 
-            if (count($selQuestionAndItsAnswers) == 0) {
-                $this->line("Problem while opening the question.");
+            if (isset($selQuestionAndItsAnswers['error_message'])) {
+                $this->line($selQuestionAndItsAnswers['error_message']);
                 $this->openPractice();
             }
 
-            if ($selQuestionAndItsAnswers['multiple_choice']) {
-                $question = $this->choice($selQuestionAndItsAnswers['question'], $selQuestionAndItsAnswers['answers']);
-            } else {
-                $question = $this->ask($selQuestionAndItsAnswers['question']);
-            }
+            $question = $this->choice(
+                $selQuestionAndItsAnswers['question'],
+                $selQuestionAndItsAnswers['answers']
+            );
 
-            if ($question == $selQuestionAndItsAnswers['correct_answer']) {
+            if ($selQuestionAndItsAnswers['correct_answer'] == $question) {
                 $this->line('Correct! Congratulations!');
-                $this->statsController->store(
-                    $this->userId,
-                    $selQuestionAndItsAnswers['questionId'],
-                    true,
-                    true
-                );
             } else {
                 $this->line('Wrong answer!');
-                $this->statsController->store(
-                    $this->userId,
-                    $selQuestionAndItsAnswers['questionId'],
-                    false,
-                    true
-                );
             }
 
+            $this->statService->saveStat(
+                $this->userId,
+                $selQuestionAndItsAnswers['questionId'],
+                ($selQuestionAndItsAnswers['correct_answer'] == $question)
+            );
+
             $this->openPractice();
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             Log::error($exception);
             $this->line('Something went wrong!');
             $this->openPractice();
@@ -308,10 +241,10 @@ class QuestionAndAnswerProject extends Command
 
     public function openStats(): void
     {
-        $arrayStats = $this->statsController->getStatsByUser($this->userId);
+        $arrayStats = $this->statService->getCompleteStatsByUser($this->userId);
 
-        if (count($arrayStats) == 0) {
-            $this->line('Something went wrong when opening the stats!');
+        if (isset($arrayStats['error_message'])) {
+            $this->line($arrayStats['error_message']);
             $this->initialMenu();
         }
 
@@ -325,15 +258,8 @@ class QuestionAndAnswerProject extends Command
 
     public function resetStats(): void
     {
-        $resetStats = $this->statsController->resetStats($this->userId);
-
-        if ($resetStats) {
-            $this->line('Stats has been reset!');
-        } else {
-            $this->line('Something went wrong when resetting the stats!');
-        }
-
+        $resetStats = $this->statService->resetStats($this->userId);
+        $this->line($resetStats['message']);
         $this->initialMenu();
     }
-
 }
