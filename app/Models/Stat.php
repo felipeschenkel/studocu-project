@@ -22,4 +22,13 @@ class Stat extends Model
         'correctly_answered' => 'boolean'
     ];
 
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function getStatsByUser(int $userId): object
+    {
+        return User::find($userId)->stat;
+    }
 }

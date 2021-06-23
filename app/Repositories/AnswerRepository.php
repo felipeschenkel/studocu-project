@@ -28,10 +28,4 @@ class AnswerRepository
             return false;
         }
     }
-
-    public function getAnswersByQuestion(int $questionId): object
-    {
-        return Answer::where('question_id', $questionId)
-            ->get();
-    }
 }

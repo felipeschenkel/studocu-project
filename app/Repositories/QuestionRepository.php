@@ -3,7 +3,6 @@
 namespace App\Repositories;
 
 use Exception;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 
 use App\Models\Question;
@@ -27,15 +26,5 @@ class QuestionRepository
             Log::error($exception);
             return 0;
         }
-    }
-
-    public function getQuestions(): Collection
-    {
-        return Question::all();
-    }
-
-    public function getQuestion(int $questionId): object
-    {
-        return Question::find($questionId);
     }
 }

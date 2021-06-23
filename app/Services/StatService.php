@@ -2,36 +2,29 @@
 
 namespace App\Services;
 
+use App\Models\Stat;
 use Exception;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
-use App\Repositories\QuestionRepository;
+use App\Models\Question;
 use App\Repositories\StatRepository;
 
 class StatService
 {
-    private $questionRepository;
     private $statsRepository;
 
-    public function __construct(
-        QuestionRepository $questionRepository,
-        StatRepository $statsRepository
-    )
+    public function __construct(StatRepository $statsRepository)
     {
-        $this->questionRepository = $questionRepository;
         $this->statsRepository = $statsRepository;
     }
 
     public function getQuestionsStats(int $userId): array
     {
         try {
-            $questions = $this->questionRepository->getQuestions();
+            $questions = (new Question())->getQuestions();
             $numberQuestions = $questions->count();
-
-            if (!session()->has('number_questions')) {
-                session(['number_questions' => $numberQuestions]);
-            }
+            session(['number_questions' => $numberQuestions]);
 
             if ($numberQuestions == 0) {
                 return [
@@ -39,7 +32,7 @@ class StatService
                 ];
             }
 
-            $stats = $this->statsRepository->getStatsByUser($userId);
+            $stats = (new Stat())->getStatsByUser($userId);
 
             $arrayQuestionsStats = array();
 
@@ -47,9 +40,9 @@ class StatService
                 $statExists = false;
                 $correctlyAnswered = false;
                 foreach ($stats as $stat) {
-                    if ($stat['question_id'] == $question->id) {
+                    if ($stat->question_id == $question->id) {
                         $statExists = true;
-                        if ($stat['correctly_answered']) {
+                        if ($stat->correctly_answered) {
                             $correctlyAnswered = true;
                         }
                     }
@@ -94,11 +87,11 @@ class StatService
 
     public function getStats(
         int $numberOfQuestions,
-        array $stats
+        object $stats
     ): array
     {
         try {
-            $answered = count($stats);
+            $answered = $stats->count();
 
             if ($answered == 0) {
                 return [[
@@ -110,7 +103,7 @@ class StatService
 
             $correctlyAnswered = 0;
             foreach ($stats as $stat) {
-                if ($stat['correctly_answered']) {
+                if ($stat->correctly_answered) {
                     $correctlyAnswered++;
                 }
             }
@@ -153,13 +146,13 @@ class StatService
     {
         try {
             if (!session()->has('number_questions')) {
-                $numberOfQuestions = $this->questionRepository->getQuestions()->count();
+                $numberOfQuestions = (new Question())->getQuestions()->count();
                 session(['number_questions' => $numberOfQuestions]);
             } else {
                 $numberOfQuestions = session('number_questions');
             }
 
-            $stats = $this->statsRepository->getStatsByUser($userId);
+            $stats = (new Stat())->getStatsByUser($userId);
             $answered = count($stats);
 
             if (count($stats) == 0) {

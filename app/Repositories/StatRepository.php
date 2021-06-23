@@ -29,13 +29,6 @@ class StatRepository
         }
     }
 
-    public function getStatsByUser(int $userId): array
-    {
-        return Stat::where('user_id', $userId)
-            ->get()
-            ->toArray();
-    }
-
     public function resetStats(int $userId): bool
     {
         try {

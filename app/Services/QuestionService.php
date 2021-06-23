@@ -2,26 +2,24 @@
 
 namespace App\Services;
 
+use App\Models\Answer;
 use Exception;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
-use App\Repositories\AnswerRepository;
+use App\Models\Question;
 use App\Repositories\QuestionRepository;
 
 class QuestionService
 {
-    private $answerRepository;
     private $questionRepository;
     private $answerService;
 
     public function __construct(
         QuestionRepository $questionRepository,
-        AnswerRepository $answerRepository,
         AnswerService $answerService
     )
     {
-        $this->answerRepository = $answerRepository;
         $this->questionRepository = $questionRepository;
         $this->answerService = $answerService;
     }
@@ -60,11 +58,11 @@ class QuestionService
     public function getListQuestionsAndAnswers(): array
     {
         try {
-            $questions = $this->questionRepository->getQuestions();
+            $questions = (new Question())->getQuestions();
             $arrayQuestionsAndAnswers = array();
 
             foreach ($questions as $keyQuest => $question) {
-                $answers = $this->answerRepository->getAnswersByQuestion($question->id);
+                $answers = (new Answer())->getAnswersByQuestion($question->id);
 
                 $stringAnswer = '';
                 foreach ($answers as $keyAnswer => $answer) {
@@ -115,8 +113,8 @@ class QuestionService
     public function getQuestionAndAnswers(int $questionId): array
     {
         try {
-            $selQuestion = $this->questionRepository->getQuestion($questionId);
-            $answers = $this->answerRepository->getAnswersByQuestion($questionId);
+            $selQuestion = (new Question())->getQuestion($questionId);
+            $answers = (new Answer())->getAnswersByQuestion($questionId);
 
             $arrayQuestionAndAnswer = array();
             $arrayQuestionAndAnswer['question'] = $selQuestion->question;

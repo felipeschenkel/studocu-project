@@ -162,13 +162,13 @@ class QuestionAndAnswerProject extends Command
     {
         try {
             $arrQuestions = $this->statService->getQuestionsStats($this->userId);
-            $numberOfQuestions = $arrQuestions['number_questions'];
-            $percentageQuestionsAnswered = $arrQuestions['percentage_answered_questions'];
-
             if (isset($arrQuestions['error_message'])) {
                 $this->line($arrQuestions['error_message']);
                 $this->initialMenu();
             }
+
+            $numberOfQuestions = $arrQuestions['number_questions'];
+            $percentageQuestionsAnswered = $arrQuestions['percentage_answered_questions'];
 
             $this->table(
                 ['Id Question', 'Question', 'Status'],
