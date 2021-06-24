@@ -20,16 +20,15 @@ class UserService
     {
         try {
             $arrayReturn = array();
-            $sanitizedNickname = trim(preg_replace( '/[\W]/', '', $nickname));
+            $arrayReturn['sanitized_nickname'] = trim(preg_replace( '/[\W]/', '', $nickname));
 
-            if ($sanitizedNickname === '') {
+            if ($arrayReturn['sanitized_nickname'] === '') {
                 $arrayReturn['error'] = 'Please inform a valid nickname, alphanumeric characters only';
             } else {
-                $userId = $this->userRepository->getOrSaveUser($sanitizedNickname);
-                $arrayReturn['user_id'] = $userId;
-                $arrayReturn['sanitized_nickname'] = $sanitizedNickname;
+                $objSaveUser = $this->userRepository->getOrSaveUser($arrayReturn['sanitized_nickname']);
+                $arrayReturn['user_id'] = $objSaveUser->id ?? null;
 
-                if ($userId == 0) {
+                if (!isset($arrayReturn['user_id'])) {
                     $arrayReturn['error'] = 'Error creating or retrieving the user - probably there is a problem with your DB connection';
                 }
             }

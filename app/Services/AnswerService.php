@@ -28,8 +28,8 @@ class AnswerService
             $indexCorrectAnswer = array_search($correctAnswer, $answers);
             foreach ($answers as $key => $answer) {
                 $correctAnswer = ($key == $indexCorrectAnswer);
-                $saveAnswer = $this->answerRepository->saveAnswer($questionId, $answer, $correctAnswer);
-                if (!$saveAnswer) {
+                $objSaveAnswer = $this->answerRepository->saveAnswer($questionId, $answer, $correctAnswer);
+                if (!isset($objSaveAnswer->id)) {
                     DB::rollBack();
                     return false;
                 }

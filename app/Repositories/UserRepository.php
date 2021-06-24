@@ -2,24 +2,14 @@
 
 namespace App\Repositories;
 
-use Exception;
-use Illuminate\Support\Facades\Log;
-
 use App\Models\User;
 
 class UserRepository
 {
-    public function getOrSaveUser(string $nickname): int
+    public function getOrSaveUser(string $nickname): object
     {
-        try {
-            $user = User::firstOrCreate([
-                'nickname' => $nickname
-            ]);
-
-            return $user->id;
-        } catch (Exception $exception) {
-            Log::error($exception);
-            return 0;
-        }
+        return User::firstOrCreate([
+            'nickname' => $nickname
+        ]);
     }
 }
