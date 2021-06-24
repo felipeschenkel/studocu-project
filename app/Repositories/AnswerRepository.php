@@ -2,9 +2,6 @@
 
 namespace App\Repositories;
 
-use Exception;
-use Illuminate\Support\Facades\Log;
-
 use App\Models\Answer;
 
 class AnswerRepository
@@ -13,19 +10,12 @@ class AnswerRepository
         int $questionId,
         string $answer,
         bool $correctAnswer
-    ): bool
+    ): object
     {
-        try {
-            Answer::create([
-                'question_id' => $questionId,
-                'answer' => $answer,
-                'is_correct' => $correctAnswer
-            ]);
-
-            return true;
-        } catch (Exception $exception) {
-            Log::error($exception);
-            return false;
-        }
+        return Answer::create([
+            'question_id' => $questionId,
+            'answer' => $answer,
+            'is_correct' => $correctAnswer
+        ]);
     }
 }

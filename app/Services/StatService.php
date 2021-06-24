@@ -12,11 +12,11 @@ use App\Repositories\StatRepository;
 
 class StatService
 {
-    private $statsRepository;
+    private $statRepository;
 
-    public function __construct(StatRepository $statsRepository)
+    public function __construct(StatRepository $statRepository)
     {
-        $this->statsRepository = $statsRepository;
+        $this->statRepository = $statRepository;
     }
 
     public function getQuestionsStats(int $userId): array
@@ -24,7 +24,6 @@ class StatService
         try {
             $questions = (new Question())->getQuestions();
             $numberQuestions = $questions->count();
-            session(['number_questions' => $numberQuestions]);
 
             if ($numberQuestions == 0) {
                 return [
@@ -127,8 +126,8 @@ class StatService
     {
         try {
             DB::beginTransaction();
-            $saveStat = $this->statsRepository->store($userId, $questionId, $correctlyAnswered);
-            if (!$saveStat) {
+            $objSaveStat = $this->statRepository->saveStat($userId, $questionId, $correctlyAnswered);
+            if (!isset($objSaveStat->id)) {
                 DB::rollBack();
                 return false;
             }
@@ -145,17 +144,12 @@ class StatService
     public function getCompleteStatsByUser(int $userId): array
     {
         try {
-            if (!session()->has('number_questions')) {
-                $numberOfQuestions = (new Question())->getQuestions()->count();
-                session(['number_questions' => $numberOfQuestions]);
-            } else {
-                $numberOfQuestions = session('number_questions');
-            }
+            $numberOfQuestions = (new Question())->getQuestions()->count();
 
             $stats = (new Stat())->getStatsByUser($userId);
-            $answered = count($stats);
+            $answered = $stats->count();
 
-            if (count($stats) == 0) {
+            if ($answered == 0) {
                 return [[
                     'number_questions' => $numberOfQuestions,
                     'answered' => '0%',
@@ -164,7 +158,7 @@ class StatService
             }
             $correctlyAnswered = 0;
             foreach ($stats as $stat) {
-                if ($stat['correctly_answered']) {
+                if ($stat->correctly_answered) {
                     $correctlyAnswered++;
                 }
             }
@@ -185,17 +179,9 @@ class StatService
     public function resetStats(int $userId): array
     {
         try {
-            $resetStatus = $this->statsRepository->resetStats($userId);
+            $this->statRepository->resetStats($userId);
 
-            if ($resetStatus) {
-                $message = 'Stats has been reset!';
-            } else {
-                $message = 'Something went wrong when resetting the stats!';
-            }
-
-            return [
-                'message' => $message
-            ];
+            return ['message' => 'Stats has been reset!'];
         } catch (Exception $exception) {
             Log::error($exception);
             return [

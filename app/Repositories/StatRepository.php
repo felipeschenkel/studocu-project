@@ -2,44 +2,28 @@
 
 namespace App\Repositories;
 
-use Exception;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
 use App\Models\Stat;
 
 class StatRepository
 {
-    public function store(
+    public function saveStat(
         int $userId,
         int $questionId,
         bool $correctlyAnswered = false
-    ): bool
+    ): object
     {
-        try {
-            Stat::updateOrCreate(
-                ['user_id' => $userId, 'question_id' => $questionId],
-                ['correctly_answered' => $correctlyAnswered]
-            );
-
-            return true;
-        } catch (Exception $exception) {
-            Log::error($exception);
-            return false;
-        }
+        return Stat::updateOrCreate(
+            ['user_id' => $userId, 'question_id' => $questionId],
+            ['correctly_answered' => $correctlyAnswered]
+        );
     }
 
-    public function resetStats(int $userId): bool
+    public function resetStats(int $userId): void
     {
-        try {
-            DB::table('stats')
-                ->where('user_id', $userId)
-                ->delete();
-
-            return true;
-        } catch (Exception $exception) {
-            Log::error($exception);
-            return false;
-        }
+        DB::table('stats')
+            ->where('user_id', $userId)
+            ->delete();
     }
 }

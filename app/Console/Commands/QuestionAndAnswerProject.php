@@ -6,7 +6,6 @@ use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
-use App\Services\AnswerService;
 use App\Services\QuestionService;
 use App\Services\StatService;
 use App\Services\UserService;
@@ -21,13 +20,11 @@ class QuestionAndAnswerProject extends Command
     private string $nickname;
     private int $userId;
 
-    private $answerService;
     private $questionService;
     private $statService;
     private $userService;
 
     public function __construct(
-        AnswerService $answerService,
         QuestionService $questionService,
         StatService $statService,
         UserService $userService
@@ -45,7 +42,6 @@ class QuestionAndAnswerProject extends Command
             7 => 'Exit'
         ];
 
-        $this->answerService = $answerService;
         $this->questionService = $questionService;
         $this->statService = $statService;
         $this->userService = $userService;
@@ -55,10 +51,10 @@ class QuestionAndAnswerProject extends Command
 
     public function handle()
     {
-        $this->askNickname();
+        $this->startProgram();
     }
 
-    public function askNickname(): void
+    public function startProgram(): void
     {
         $nickname = $this->ask('What is your nickname?');
 
@@ -66,7 +62,7 @@ class QuestionAndAnswerProject extends Command
 
         if (isset($saveUser['error'])) {
             $this->info($saveUser['error']);
-            $this->askNickname();
+            $this->startProgram();
         }
 
         $this->nickname = $saveUser['sanitized_nickname'];
@@ -103,7 +99,7 @@ class QuestionAndAnswerProject extends Command
         }
 
         if ($optionSelected == 6) {
-            $this->askNickname();
+            $this->startProgram();
         }
 
         if ($optionSelected == 7) {

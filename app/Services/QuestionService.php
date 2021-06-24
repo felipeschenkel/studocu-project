@@ -33,8 +33,10 @@ class QuestionService
         try {
             DB::beginTransaction();
 
-            $questionId = $this->questionRepository->saveQuestion($question);
-            if ($questionId == 0) {
+            $objSaveQuestion = $this->questionRepository->saveQuestion($question);
+            $questionId = $objSaveQuestion->id ?? null;
+
+            if (!isset($questionId)) {
                 DB::rollBack();
                 return ['message' => 'Problem saving the question'];
             }
